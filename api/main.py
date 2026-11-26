@@ -3,10 +3,12 @@
 from fastapi import FastAPI
 
 from api.catalog import router as catalog_router
+from api.comparison import router as comparison_router
 from api.storage import fetch_rows
 
 app = FastAPI(title="NBA Interactive Dashboard", version="0.2.0")
 app.include_router(catalog_router)
+app.include_router(comparison_router)
 
 
 @app.get("/health")

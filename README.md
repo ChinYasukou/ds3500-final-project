@@ -36,13 +36,14 @@ The shared dataset is the **2024–25 regular season**, downloaded on Nov 25, 20
 | CSV validation and transactional season import | Included |
 | Shared `/seasons` and `/players` selector APIs | Included |
 | Shared HTTP client and read-only SQLite query helper | Included |
-| Three analysis endpoints, controls, and charts | Pending |
+| Player comparison API and parameter-aware cache integration | Implemented on `feature/player-comparison` |
+| Standings and leaderboard APIs, all feature controls and charts | Pending |
 | Parameter-aware API response cache with 300-second TTL | Included and connected to selector APIs, ready for feature endpoints |
 | Individual feature tests, peer reviews, and demonstrations | Pending |
 
 ### Progress checkpoint
 
-Updated Nov 25, 2026. Shared setup is complete and available on `main`. The three personal analysis features are pending.
+Updated Nov 25, 2026. Shared setup is complete and available on `main`. The comparison API and its tests are implemented on `feature/player-comparison`. The comparison UI and the other two features are pending.
 
 | Milestone | Status |
 | --- | --- |
@@ -50,7 +51,7 @@ Updated Nov 25, 2026. Shared setup is complete and available on `main`. The thre
 | Verified dataset and reproducible database import | Complete |
 | Sebastian's standings feature and tests | Pending |
 | Zexian's leaderboard feature and tests | Pending |
-| Jinghao's comparison feature and tests | Pending |
+| Jinghao's comparison feature and tests | API and 12 API tests implemented, UI and charts pending |
 | Integrated feature validation and teammate reproduction | Pending |
 | Live demonstration and demo-testing submission | Pending |
 | Final contribution evidence and repository submission | Pending |
@@ -61,7 +62,7 @@ This is 2 of 8 listed milestones completed. These milestones differ in size. Cou
 
 On Nov 25, the shared test suite passed **19 tests**. A temporary independent project directory was used to verify source checksums, regenerate identical cleaned CSVs, import the season twice, run all tests, start FastAPI and Streamlit, call the catalog endpoints over HTTP, and use the Streamlit connection button. The API returned 30 teams and 569 players. Optional restoration from the pinned download URLs and `python -m pip check` also passed.
 
-The next handoff step is each teammate pulling `main` and reproducing the same commands on their own computer. Each member's personal feature implementation and tests remain pending.
+The next handoff step is each teammate pulling `main` and reproducing the same commands on their own computer. The comparison backend has 12 new tests, bringing the full suite to 31 passing tests. Its UI and charts, and the other two members' features, remain pending.
 
 ## Architecture
 
@@ -113,6 +114,7 @@ Optional environment variables are `NBA_DB_PATH` for the SQLite file and `NBA_AP
 api/
   main.py                 FastAPI entry point and readiness endpoint
   catalog.py              Shared season and player-selector endpoints
+  comparison.py           Cached two-player season comparison endpoint
   storage.py              SQLite initialization and read-only SQL helper
   cache.py                Shared bounded TTL response cache
   schema.sql              Team and player table definitions
@@ -132,10 +134,11 @@ tests/
   test_foundation.py      Schema, readiness, and UI failure checks
   test_shared_data.py     Validation, repeat imports, rollback, and snapshot checks
   test_shared_api.py      Selectors, cache hits, expiration, capacity, and concurrency
+  test_comparison.py      Comparison results, validation, SQL binding, and caching
 requirements.txt          Pinned Python dependencies
 ```
 
-Place future feature endpoints in `api/standings.py`, `api/leaderboards.py`, and `api/comparison.py`, and register their routers in `api/main.py`. Place their UI sections in matching modules under `ui/`. Coordinate edits to the shared entry points through small PRs.
+The comparison router is implemented in `api/comparison.py` and registered in `api/main.py`. Add the remaining feature routers in `api/standings.py` and `api/leaderboards.py`. Place their UI sections in matching modules under `ui/`. Coordinate edits to the shared entry points through small PRs.
 
 ## Data preparation and agreed fields
 
@@ -182,23 +185,25 @@ The import also accepts `--database PATH` or the shared `NBA_DB_PATH` environmen
 
 ## Feature API contracts and acceptance checks
 
-These three endpoints are planned. Agree on their JSON fields before implementing the UI.
+The comparison endpoint is implemented. Standings and leaderboards remain planned. Agree on their JSON fields before implementing the UI.
 
 | Feature | Planned request | Response content | Acceptance checks |
 | --- | --- | --- | --- |
 | Standings | `GET /standings?season=2024-25&conference=East` | Season, selected conference, ordered teams with wins, losses, and win percentage | Filter correctly, calculate percentages correctly, order descending by percentage, break ties by team name. Describe this as statistical ordering when ties occur. |
 | Leaderboards | `GET /leaderboards?season=2024-25&metric=points_per_game&min_games=20` | Season, metric, threshold, top 10 player IDs, names, games, and metric values | Whitelist the three metrics, apply games threshold before ranking, sort descending with player ID as a tie-breaker. |
-| Comparison | `GET /comparison?season=2024-25&player_a=ID_A&player_b=ID_B` | Season and two identified players with all three per-game metrics and games played | Return the selected players' values, reject duplicate selections, and report unknown player IDs. |
+| Comparison | `GET /comparison?season=2024-25&player_a=ID_A&player_b=ID_B` | `season` and a `players` array in the requested A/B order, with IDs, names, games played, and the three per-game metrics | Return the selected players' values, reject duplicate selections, and report unknown player IDs. |
 
 Shared selectors are implemented. `GET /seasons` returns `{"items": ["2024-25"]}`. `GET /players?season=2024-25` returns `{"season": "2024-25", "items": [{"player_id": "...", "player_name": "..."}]}` with names ordered alphabetically. Use these IDs in the comparison request. Missing or malformed season parameters produce 422 and unknown seasons produce 404. Database failures produce 503.
 
 Use `api.storage.fetch_rows(sql, parameters)` for read-only SQLite queries with bound values. Whitelist metric identifiers before choosing a SQL column. Use `ui.api_client.fetch_json(endpoint, params)` for UI requests. The client applies a five-second timeout, raises HTTP errors, and validates that JSON is an object. Each feature UI should catch these errors and display a useful message.
 
+The comparison endpoint returns 422 for duplicate or blank player selections, 404 for an unknown season or selected player, and 503 when the database is unavailable. Values preserve stored precision. Its endpoint tests verify exact values, selection order, season isolation, cache hits, swapped/different selections, and refresh at the 300-second TTL boundary. A live HTTP check also compared LeBron James and Stephen Curry against their SQLite records.
+
 Use FastAPI validation for invalid choices, invalid numbers, and malformed requests. Return 404 for an unknown season or selected player, and an empty items list for valid filters with zero qualifying results. The UI should explain empty results, connection failures, timeouts, and API validation errors. Keep HTTP request timeouts explicit.
 
 ## Shared API caching
 
-`api/cache.py` implements a thread-safe, process-local response cache with a **300-second TTL** and a maximum of **256 entries**. `/seasons` and `/players` use it. The three feature owners should connect their analysis endpoints to the same helper after validating and defaulting request parameters.
+`api/cache.py` implements a thread-safe, process-local response cache with a **300-second TTL** and a maximum of **256 entries**. `/seasons`, `/players`, and `/comparison` use it. The remaining feature owners should connect their endpoints to the same helper after validating and defaulting request parameters.
 
 ```python
 from api.cache import query_cache_key, response_cache
@@ -247,13 +252,13 @@ Each member must personally write at least one test for their new feature and be
 
 ### Jinghao's comparison feature checklist
 
-The common player catalog, database query helper, HTTP client, and cache are ready to reuse. The following personal feature steps are pending.
+The common player catalog, database query helper, HTTP client, and cache are ready to reuse. The comparison API and automated tests are implemented. UI work, test walkthrough, and peer review remain.
 
-- [ ] Implement the two-player SQLite query and comparison API response.
+- [x] Implement the two-player SQLite query and comparison API response.
 - [ ] Add player selectors and send the selected IDs through the HTTP client.
 - [ ] Display grouped bars and a table for the three per-game statistics.
-- [ ] Integrate comparison parameters with the shared cache and validate invalid selections.
-- [ ] Personally write and explain comparison feature tests.
+- [x] Integrate comparison parameters with the shared cache and validate invalid selections.
+- [ ] Review and explain the 12 implemented comparison API tests, and add UI tests with the interface work.
 - [ ] Open a feature PR, obtain peer review, and prepare the live demonstration.
 
 ### Git collaboration and commit messages
@@ -332,7 +337,7 @@ The Nov 23 project overview allocates the final repository's 300 points to **ind
 
 | Member | Implemented new feature | Actual test path/case | Feature PR | Teammate review |
 | --- | --- | --- | --- | --- |
-| Jinghao Shen | Pending | Pending | Pending | Pending |
+| Jinghao Shen | Comparison API implemented, interface pending | `tests/test_comparison.py`, including selected-season results, input errors, SQL binding, and cache behavior | Pending | Pending |
 | Sebastian Brookes | Pending | Pending | Pending | Pending |
 | Zexian Li | Pending | Pending | Pending | Pending |
 
