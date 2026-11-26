@@ -141,6 +141,21 @@ Normalize parameter defaults before constructing keys. Repeated equivalent reque
 
 Add tests for a cache hit avoiding repeated analysis, parameter isolation, and expiration using a controllable clock. Update this section with the actual cache implementation and tests when implemented.
 
+## Reusing course work
+
+Use the existing MP1–3 and class exercises when their behavior fits the NBA task. Keep the shared repository runnable on its own by bringing adapted code and required dependencies into this project.
+
+| Course material in the local DS3500 folder | What to adapt | Owner |
+| --- | --- | --- |
+| `class-exercise/class8_src/` and `class-exercise/class10_data_validator.py`, plus relevant MP1 validation functions | Required-column checks, numeric cleaning, duplicate handling, and import validation | Zexian, with Sebastian checking team fields |
+| `class-exercise/class12_14/`, plus relevant MP2 code | FastAPI validation, error responses, request handling, and logging | Each feature owner |
+| `class-exercise/class16_18/check_storage.py` and `main.py`, plus relevant MP3 code | SQLite queries, parameter-aware cache keys, TTL expiration, and invalidation | Jinghao coordinates shared cache, each owner adapts their query |
+| `class-exercise/class20_21/api_client.py`, `streamlit_app.py`, and `chart_examples.py` | HTTP requests with parameters and timeouts, Streamlit controls, and charts | Each feature owner |
+
+The starter HTTP check follows the class exercise's `requests.get` → `raise_for_status` → JSON pattern. Apply the same flow to each analysis endpoint. Record substantial adaptations in the feature PR and explain the new NBA behavior and tests.
+
+Jinghao's player-comparison feature specifically includes the two API-backed player selectors, HTTP request, SQLite player lookup, comparison response, grouped bar chart/table, integration with the shared cache, and his own feature tests. Shared cache work also supports the other two endpoints.
+
 ## Development workflow
 
 1. **Confirm the input data.** Sebastian and Zexian verify that both tables can be obtained for the same completed regular season. All members agree on scope, fields, source attribution, and the assignments above.
