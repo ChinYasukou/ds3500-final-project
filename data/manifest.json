@@ -1,0 +1,24 @@
+{
+  "provider": "BoxScore Lab",
+  "upstream": "NBA Stats / NBA.com",
+  "season": "2024-25",
+  "season_type": "Regular Season",
+  "retrieved_date": "2026-11-25",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "source_page": "https://boxscorelab.com/downloads/",
+  "files": [
+    {
+      "path": "data/source/2024-25-team-standings.csv",
+      "url": "https://boxscorelab.com/downloads/2024-25-team-standings.csv",
+      "sha256": "674d4df1619e1b6eaa91c45c23c6726fba703022f0d64ecd177343ad8fa6f32f",
+      "rows": 30
+    },
+    {
+      "path": "data/source/2024-25-player-season-totals.csv",
+      "url": "https://boxscorelab.com/downloads/2024-25-player-season-totals.csv",
+      "sha256": "1e40bcfa70ea7aa6ddeae1e854d43fbcbc8ee2eeacd48dabcfb0b8465ebf2a42",
+      "rows": 569
+    }
+  ]
+}
