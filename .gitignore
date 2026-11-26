@@ -221,3 +221,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local NBA databases, source downloads, and personal planning notes
+.DS_Store
+KICKOFF.local.md
+data/*.sqlite3*
+data/raw/
