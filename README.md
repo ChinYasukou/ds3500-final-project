@@ -230,14 +230,10 @@ Jinghao's player-comparison feature specifically includes the two API-backed pla
 
 ## Development workflow
 
-1. **Review the prepared data and assignments.** The verified 2024–25 snapshots, mappings, importer, and shared tests are ready. Sebastian reviews team records and Zexian reviews player records. All members confirm their feature ownership and API response fields.
-2. **Pull the shared foundation from `main`.** Everyone follows quick start and checks the data and test results before creating their own feature branch. Each new personal feature goes through a PR and another member's review before merging.
-3. **Load the shared database.** Each teammate runs the documented import and tests, then checks that `/health` returns 30 teams and 569 players. The importer and rollback checks are already implemented.
-4. **Build each feature end to end.** Implement the SQL analysis and validation, expose the API response, connect Streamlit over HTTP, render useful results, and write the owner's test. Use small hand-checkable test fixtures.
-5. **Use the shared cache and integrate.** Each owner adopts the implemented cache helper for their endpoint. Register all routers, combine UI sections, and resolve shared-file changes in PRs. Confirm all three features work in one application.
-6. **Reproduce on a teammate's computer.** Clone the repository, follow the README, acquire data, import, start both services, and run tests. Fix missing instructions and record actual feature/test/PR evidence below.
-7. **Submit the progress report and rehearse.** Report completed work, remaining tasks, challenges, and the repository URL. Run each member's live scenario on the presentation computer, including empty and invalid inputs.
-8. **Present and finalize.** Each member demonstrates and explains their own feature, its code, tests, chart interpretation, and limitations. Push reviewed final changes and submit the shared repository link through Canvas.
+1. **Start from `main`.** Follow quick start, import the shared data, and confirm your assigned feature.
+2. **Build your feature.** Each member uses one feature branch for their API, UI, chart, cache integration, and personal tests. Open a PR and obtain another member's review before merging, as required by the assignment.
+3. **Maintain the shared project on `main`.** Shared setup, documentation, small fixes, and configuration updates can be committed directly to `main`. Pull before editing, use specific commit messages, and run relevant checks when behavior changes.
+4. **Integrate and demonstrate.** Check all three features together on the presentation computer. Each member demonstrates and explains their own feature. Submit the progress report, demo-testing form, and final repository link on the dates below, and complete the contribution table.
 
 ### Feature tests owned by each member
 
@@ -262,7 +258,25 @@ The common player catalog, database query helper, HTTP client, and cache are rea
 
 ### Git collaboration and commit messages
 
-Use the same shared repository and a separate feature branch for each member. For example, Sebastian's workflow when starting his feature is as follows.
+Use the same shared repository. Choose the workflow that fits the change.
+
+| Change | Workflow |
+| --- | --- |
+| Shared setup, README updates, small fixes, or configuration changes | Pull `main`, make and check the change, commit, and push directly to `main`. |
+| Each member's new project feature | Develop on a feature branch, include a personal test, open a PR, obtain teammate review, and merge into `main`. |
+
+For a README update, the direct workflow is as follows. Pull before making edits and stage the files you changed.
+
+```bash
+git switch main
+git pull --ff-only origin main
+# Edit README.md and check the changes.
+git add README.md
+git commit -m "Clarify the database setup instructions"
+git push origin main
+```
+
+For Sebastian's standings feature, use the required feature workflow.
 
 ```bash
 git switch main
@@ -274,7 +288,7 @@ git commit -m "Add conference filters and a win percentage chart"
 git push -u origin feature/team-standings
 ```
 
-Include shared entry-point edits in the staged files when registering the feature. Open a PR to `main` and have the assigned teammate review it before merging. Describe the user action, resulting behavior, changed files, and test command/results. After merging, everyone pulls the updated `main` before starting new work.
+Include entry-point edits when registering the feature. Open a PR to `main` with the feature summary and test results, then have the assigned teammate review it before merging. Keep fixes to an in-progress feature on that feature's branch. Everyone pulls the latest `main` before starting new work.
 
 Write commits that describe concrete completed work. Suitable examples include the following.
 
