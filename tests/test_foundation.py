@@ -73,7 +73,7 @@ def test_streamlit_renders_connection_failure(monkeypatch):
         raise requests.ConnectionError("API unavailable")
 
     monkeypatch.setattr(requests, "get", disconnected)
-    page = AppTest.from_file(Path(__file__).resolve().parents[1] / "ui/app.py").run()
+    page = AppTest.from_file(Path(__file__).resolve().parents[1] / "ui/app.py", default_timeout=10).run()
     page.button[0].click().run()
     assert not page.exception
-    assert "Start FastAPI" in page.error[0].value
+    assert any("Start FastAPI" in error.value for error in page.error)

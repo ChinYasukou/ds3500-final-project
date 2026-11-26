@@ -36,14 +36,14 @@ The shared dataset is the **2024–25 regular season**, downloaded on Nov 25, 20
 | CSV validation and transactional season import | Included |
 | Shared `/seasons` and `/players` selector APIs | Included |
 | Shared HTTP client and read-only SQLite query helper | Included |
-| Player comparison API and parameter-aware cache integration | Implemented on `feature/player-comparison` |
-| Standings and leaderboard APIs, all feature controls and charts | Pending |
+| Player comparison API, selectors, chart, table, and cache integration | Implemented on `feature/player-comparison`, pending peer review |
+| Standings and leaderboard APIs, controls, and charts | Pending |
 | Parameter-aware API response cache with 300-second TTL | Included and connected to selector APIs, ready for feature endpoints |
 | Individual feature tests, peer reviews, and demonstrations | Pending |
 
 ### Progress checkpoint
 
-Updated Nov 25, 2026. Shared setup is complete and available on `main`. The comparison API and its tests are implemented on `feature/player-comparison`. The comparison UI and the other two features are pending.
+Updated Nov 25, 2026. Shared setup is complete and available on `main`. The comparison feature is implemented end to end on `feature/player-comparison`, with peer review pending. Standings and leaderboards are pending.
 
 | Milestone | Status |
 | --- | --- |
@@ -51,7 +51,7 @@ Updated Nov 25, 2026. Shared setup is complete and available on `main`. The comp
 | Verified dataset and reproducible database import | Complete |
 | Sebastian's standings feature and tests | Pending |
 | Zexian's leaderboard feature and tests | Pending |
-| Jinghao's comparison feature and tests | API and 12 API tests implemented, UI and charts pending |
+| Jinghao's comparison feature and tests | Implemented with 12 API tests and 7 UI tests, pending peer review |
 | Integrated feature validation and teammate reproduction | Pending |
 | Live demonstration and demo-testing submission | Pending |
 | Final contribution evidence and repository submission | Pending |
@@ -62,7 +62,7 @@ This is 2 of 8 listed milestones completed. These milestones differ in size. Cou
 
 On Nov 25, the shared test suite passed **19 tests**. A temporary independent project directory was used to verify source checksums, regenerate identical cleaned CSVs, import the season twice, run all tests, start FastAPI and Streamlit, call the catalog endpoints over HTTP, and use the Streamlit connection button. The API returned 30 teams and 569 players. Optional restoration from the pinned download URLs and `python -m pip check` also passed.
 
-The next handoff step is each teammate pulling `main` and reproducing the same commands on their own computer. The comparison backend has 12 new tests, bringing the full suite to 31 passing tests. Its UI and charts, and the other two members' features, remain pending.
+The next handoff step is each teammate pulling `main` and reproducing the same commands on their own computer. The comparison feature has 12 API tests and 7 UI tests, bringing the full suite to 38 passing tests. Live HTTP and UI checks verified LeBron James versus Stephen Curry and switching the first player to Luka Dončić. Browser inspection confirmed the selectors, chart, and table render correctly. The other two members' features remain pending.
 
 ## Architecture
 
@@ -104,7 +104,7 @@ source .venv/bin/activate
 python -m streamlit run ui/app.py
 ```
 
-Open Streamlit at <http://localhost:8501> and click **Check API and database connection**. After importing the snapshot, the connection check reports 30 team and 569 player records. FastAPI's interactive documentation is at <http://127.0.0.1:8000/docs>.
+Open Streamlit at <http://localhost:8501>. The comparison page initially shows LeBron James and Stephen Curry. Search or choose different players to update the grouped chart and statistics table automatically. The second selector excludes the first player. Expand **Connection status** for the API/database check, which reports 30 team and 569 player records after import. FastAPI's interactive documentation is at <http://127.0.0.1:8000/docs>.
 
 Optional environment variables are `NBA_DB_PATH` for the SQLite file and `NBA_API_URL` for the API base URL. Defaults are `data/nba.sqlite3` and `http://127.0.0.1:8000`. Set the same `NBA_DB_PATH` in initialization and API terminals. Relative database paths resolve from the working directory.
 
@@ -119,7 +119,8 @@ api/
   cache.py                Shared bounded TTL response cache
   schema.sql              Team and player table definitions
 ui/
-  app.py                  Streamlit entry point and HTTP connection check
+  app.py                  Streamlit entry point and connection diagnostics
+  comparison.py           Player selectors, grouped bars, and statistics table
   api_client.py           Shared HTTP JSON client with timeout
 scripts/
   init_db.py              Create empty SQLite tables
@@ -135,6 +136,7 @@ tests/
   test_shared_data.py     Validation, repeat imports, rollback, and snapshot checks
   test_shared_api.py      Selectors, cache hits, expiration, capacity, and concurrency
   test_comparison.py      Comparison results, validation, SQL binding, and caching
+  test_comparison_ui.py   Player selection, displayed values, chart, and failure states
 requirements.txt          Pinned Python dependencies
 ```
 
@@ -252,13 +254,13 @@ Each member must personally write at least one test for their new feature and be
 
 ### Jinghao's comparison feature checklist
 
-The common player catalog, database query helper, HTTP client, and cache are ready to reuse. The comparison API and automated tests are implemented. UI work, test walkthrough, and peer review remain.
+The common player catalog, database query helper, HTTP client, and cache are ready to reuse. The comparison API, UI, chart, and automated tests are implemented. Test walkthrough, peer review, and demonstration preparation remain.
 
 - [x] Implement the two-player SQLite query and comparison API response.
-- [ ] Add player selectors and send the selected IDs through the HTTP client.
-- [ ] Display grouped bars and a table for the three per-game statistics.
+- [x] Add player selectors and send the selected IDs through the HTTP client.
+- [x] Display grouped bars and a table for the three per-game statistics.
 - [x] Integrate comparison parameters with the shared cache and validate invalid selections.
-- [ ] Review and explain the 12 implemented comparison API tests, and add UI tests with the interface work.
+- [ ] Review and explain the 12 comparison API tests and 7 UI tests before presentation.
 - [ ] Open a feature PR, obtain peer review, and prepare the live demonstration.
 
 ### Git collaboration and commit messages
@@ -337,7 +339,7 @@ The Nov 23 project overview allocates the final repository's 300 points to **ind
 
 | Member | Implemented new feature | Actual test path/case | Feature PR | Teammate review |
 | --- | --- | --- | --- | --- |
-| Jinghao Shen | Comparison API implemented, interface pending | `tests/test_comparison.py`, including selected-season results, input errors, SQL binding, and cache behavior | Pending | Pending |
+| Jinghao Shen | Player comparison API, selectors, grouped chart, and table implemented | `tests/test_comparison.py` and `tests/test_comparison_ui.py` cover results, cache behavior, player changes, and failure states | Pending | Pending |
 | Sebastian Brookes | Pending | Pending | Pending | Pending |
 | Zexian Li | Pending | Pending | Pending | Pending |
 
