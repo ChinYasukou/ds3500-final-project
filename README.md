@@ -14,16 +14,16 @@ The NBA visualization topic is selected. The assignments below are proposed by J
 | Sebastian Brookes | Team standings | Select East, West, or all teams and view wins, losses, win percentage, and a win-percentage bar chart. | `feature/team-standings` | Zexian |
 | Zexian Li | Player leaderboards | Select points, rebounds, or assists per game and a minimum games played threshold to view the top 10 players. | `feature/player-leaderboards` | Jinghao |
 
-Additional shared work is distributed as follows.
+Shared preparation is implemented on `setup/nba-shared-foundation`. The follow-up responsibilities are as follows.
 
-- Jinghao coordinates the application shell, shared cache helper, integration, and submission checklist.
-- Sebastian checks the team data source, conference labels, team records, and standings explanations.
-- Zexian checks the player data source, prepares the CSV import script for both tables, and handles player aggregation rules. Sebastian supplies the verified team mapping and Jinghao reviews the import integration.
+- Jinghao maintains the application shell and shared cache, and coordinates feature integration and the submission checklist.
+- Sebastian reviews the prepared team records and conference mapping, then implements and explains the standings feature.
+- Zexian reviews the prepared player data and import rules, then implements and explains the leaderboards feature. The shared importer is already available for everyone to use.
 - All three review a teammate's PR, run the application locally, and write their own feature test. Shared setup work is tracked separately from individual new features.
 
 ## Scope and current status
 
-Use one completed regular season, with team season records and player season averages. The proposed season is **2024–25**, pending confirmation that a reusable dataset supplies both tables. Use a fixed downloaded snapshot for reproducible local demonstrations.
+The shared dataset is the **2024–25 regular season**, downloaded on Nov 25, 2026. The repository includes the original snapshots and cleaned CSVs for **30 teams and 569 players**. Each teammate can rebuild SQLite from the committed files without a network request. The assignments above remain proposals for the team to confirm.
 
 | Component | Status |
 | --- | --- |
@@ -31,12 +31,37 @@ Use one completed regular season, with team season records and player season ave
 | SQLite table definitions and repeatable schema initialization | Included |
 | FastAPI `/health` endpoint reading SQLite row counts | Included |
 | Streamlit page with a real HTTP connection check | Included |
-| Infrastructure tests | Included |
-| Verified source dataset, source URL, license, and download instructions | Pending |
-| CSV validation and transactional import | Pending |
+| Infrastructure, import, snapshot, selector API, and cache tests | Included and passing |
+| Verified source snapshots, attribution, checksums, and restore instructions | Included |
+| CSV validation and transactional season import | Included |
+| Shared `/seasons` and `/players` selector APIs | Included |
+| Shared HTTP client and read-only SQLite query helper | Included |
 | Three analysis endpoints, controls, and charts | Pending |
-| Parameter-aware API response cache with TTL | Pending |
+| Parameter-aware API response cache with 300-second TTL | Included and connected to selector APIs, ready for feature endpoints |
 | Individual feature tests, peer reviews, and demonstrations | Pending |
+
+### Progress checkpoint
+
+Updated Nov 25, 2026. Shared setup is ready for team review. The three personal analysis features are pending.
+
+| Milestone | Status |
+| --- | --- |
+| Application foundation and shared helpers | Complete |
+| Verified dataset and reproducible database import | Complete |
+| Sebastian's standings feature and tests | Pending |
+| Zexian's leaderboard feature and tests | Pending |
+| Jinghao's comparison feature and tests | Pending |
+| Integrated feature validation and teammate reproduction | Pending |
+| Live demonstration and demo-testing submission | Pending |
+| Final contribution evidence and repository submission | Pending |
+
+This is 2 of 8 listed milestones completed. These milestones differ in size. Counts track deliverables and do not estimate grades or hours. Shared infrastructure tests are recorded separately from each member's own feature tests.
+
+### Shared setup verification
+
+On Nov 25, the shared test suite passed **19 tests**. A temporary independent project directory was used to verify source checksums, regenerate identical cleaned CSVs, import the season twice, run all tests, start FastAPI and Streamlit, call the catalog endpoints over HTTP, and use the Streamlit connection button. The API returned 30 teams and 569 players. Optional restoration from the pinned download URLs and `python -m pip check` also passed.
+
+The next handoff step is a teammate reviewing the setup branch and reproducing the same commands on their own computer. Each member's personal feature implementation and tests remain pending.
 
 ## Architecture
 
@@ -59,11 +84,11 @@ Run commands from the repository root. The foundation was verified with Python 3
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python -m scripts.init_db
+python -m scripts.import_data
 python -m pytest -q
 ```
 
-Initialize the database once before starting the API. Running initialization again preserves existing records. This command creates empty tables. The CSV templates contain headers, and NBA records will be added through the upcoming import work.
+The import command creates the schema and loads the committed cleaned CSVs. It reports 30 teams and 569 players. Repeating the import replaces only the supplied seasons in one transaction. Stop and restart FastAPI after reimporting data to clear its in-memory cache. `python -m scripts.init_db` remains available to create empty tables for development.
 
 Start FastAPI in one terminal with the virtual environment activated.
 
@@ -78,7 +103,7 @@ source .venv/bin/activate
 python -m streamlit run ui/app.py
 ```
 
-Open Streamlit at <http://localhost:8501> and click **Check API and database connection**. A fresh database reports zero team and player records. FastAPI's interactive documentation is at <http://127.0.0.1:8000/docs>.
+Open Streamlit at <http://localhost:8501> and click **Check API and database connection**. After importing the snapshot, the connection check reports 30 team and 569 player records. FastAPI's interactive documentation is at <http://127.0.0.1:8000/docs>.
 
 Optional environment variables are `NBA_DB_PATH` for the SQLite file and `NBA_API_URL` for the API base URL. Defaults are `data/nba.sqlite3` and `http://127.0.0.1:8000`. Set the same `NBA_DB_PATH` in initialization and API terminals. Relative database paths resolve from the working directory.
 
@@ -87,18 +112,26 @@ Optional environment variables are `NBA_DB_PATH` for the SQLite file and `NBA_AP
 ```text
 api/
   main.py                 FastAPI entry point and readiness endpoint
-  storage.py              Shared database path and schema initialization
-  schema.sql              Team and player tables
+  catalog.py              Shared season and player-selector endpoints
+  storage.py              SQLite initialization and read-only SQL helper
+  cache.py                Shared bounded TTL response cache
+  schema.sql              Team and player table definitions
 ui/
   app.py                  Streamlit entry point and HTTP connection check
+  api_client.py           Shared HTTP JSON client with timeout
 scripts/
-  init_db.py              Create the SQLite schema
-  __init__.py
-data/templates/
-  teams.csv               Target team CSV header
-  players.csv             Target player CSV header
+  init_db.py              Create empty SQLite tables
+  prepare_data.py         Verify snapshots and rebuild cleaned CSVs
+  import_data.py          Validate CSVs and atomically import seasons
+data/
+  manifest.json           Source URLs, license, row counts, and SHA-256 checksums
+  source/                 Committed original CSV snapshots
+  processed/              Committed canonical team and player CSVs
+  templates/              Canonical CSV headers
 tests/
-  test_foundation.py      Shared infrastructure tests
+  test_foundation.py      Schema, readiness, and UI failure checks
+  test_shared_data.py     Validation, repeat imports, rollback, and snapshot checks
+  test_shared_api.py      Selectors, cache hits, expiration, capacity, and concurrency
 requirements.txt          Pinned Python dependencies
 ```
 
@@ -106,18 +139,46 @@ Place future feature endpoints in `api/standings.py`, `api/leaderboards.py`, and
 
 ## Data preparation and agreed fields
 
-Before feature coding, confirm the source and its reuse terms, season, regular-season filter, download URL, original column names, and mapping to the template headers. Record the source attribution, retrieval date, units, and exact download/import commands here when verified. The data source is still open. The current foundation can be run with its empty database.
+Source attribution is **BoxScore Lab, data retrieved Nov 25, 2026, underlying statistics from NBA Stats / NBA.com**. The provider publishes the CSVs under **CC BY 4.0**. This project keeps the source snapshots and derives per-game averages and conference labels. [Source and reuse terms](https://boxscorelab.com/downloads/), [provider methodology](https://boxscorelab.com/methodology/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+| Source file | Records | Contents |
+| --- | --- | --- |
+| `data/source/2024-25-team-standings.csv` | 30 | Team season records |
+| `data/source/2024-25-player-season-totals.csv` | 569 | One full-season record per player |
+
+`data/manifest.json` records the download URLs and exact SHA-256 hashes. The preparation script verifies hashes and row counts before converting the snapshots. The committed cleaned files let teammates import and develop offline after installing dependencies.
 
 | SQLite table | Fields | Uniqueness |
 | --- | --- | --- |
 | `teams` | `season`, `team_id`, `team_name`, `conference`, `wins`, `losses` | `(season, team_id)` |
 | `players` | `season`, `player_id`, `player_name`, `games_played`, `points_per_game`, `rebounds_per_game`, `assists_per_game` | `(season, player_id)` |
 
-Use stable player IDs to distinguish players with the same name. Store `East` or `West` as conference values. Store season labels consistently, such as `2024-25`. Derive win percentage as `wins / (wins + losses)`, guarding against a zero denominator.
+Preparation renames source `team` to `team_id`, adds an explicit East/West mapping for all 30 teams, and derives each player's per-game values from season totals divided by games played. Keep full precision in SQLite and round when displaying values. Every team has 82 games, each conference has 15 teams, and the sum of wins and losses is 1,230 each.
 
-Keep one full-season record for each player. For traded players, prefer the source's combined season row and exclude team stint rows. If combined rows must be calculated, derive averages from season totals and games played. Preserve missing values for validation and resolve them explicitly before insertion. Validate required columns, numeric values, positive player games played, and duplicate keys.
+The source has one combined season row per player, including traded players. Player names are unique within this snapshot. Because the source does not supply NBA player IDs, preparation creates a deterministic `bsl_` ID from the first 16 hexadecimal characters of the player name's UTF-8 SHA-256 hash. These IDs are snapshot identifiers. A future source with duplicate names will require an updated identity mapping. The importer rejects duplicate keys. Preserve Unicode names such as Luka Dončić.
 
-The import owner will add `scripts/import_data.py`. The proposed command is `python -m scripts.import_data --teams PATH --players PATH`. Implement and verify this command before adding it to quick start. Validate both files before replacing records and apply changes in one transaction. Reimporting the same snapshot must produce the same stored records. Reload the API after a changed import to clear process-local caches.
+Derive team win percentage as `wins / (wins + losses)`. Import validation rejects missing fields, invalid season labels, negative counts, zero games played, non-finite averages, duplicate keys, and mismatched seasons between the files. Both files are validated before any data replacement. Import uses one transaction for both tables, preserves other seasons, and rolls back the replacement if a database operation fails.
+
+To rebuild cleaned files from the committed source snapshots and reimport them, run the following commands from the repository root.
+
+```bash
+python -m scripts.prepare_data
+python -m scripts.import_data
+```
+
+To restore the exact source snapshots from their URLs, use the optional download command. It verifies the pinned hashes before writing files and reports an error if the upstream contents have changed. The committed snapshots remain available for reproduction.
+
+```bash
+python -m scripts.prepare_data --download
+```
+
+Custom canonical files can be imported with explicit paths.
+
+```bash
+python -m scripts.import_data --teams PATH_TO_TEAMS_CSV --players PATH_TO_PLAYERS_CSV
+```
+
+The import also accepts `--database PATH` or the shared `NBA_DB_PATH` environment variable. Restart FastAPI after importing changed data.
 
 ## Feature API contracts and acceptance checks
 
@@ -129,17 +190,28 @@ These three endpoints are planned. Agree on their JSON fields before implementin
 | Leaderboards | `GET /leaderboards?season=2024-25&metric=points_per_game&min_games=20` | Season, metric, threshold, top 10 player IDs, names, games, and metric values | Whitelist the three metrics, apply games threshold before ranking, sort descending with player ID as a tie-breaker. |
 | Comparison | `GET /comparison?season=2024-25&player_a=ID_A&player_b=ID_B` | Season and two identified players with all three per-game metrics and games played | Return the selected players' values, reject duplicate selections, and report unknown player IDs. |
 
-The two player feature owners jointly add an API-backed player selector using IDs and names, for example `GET /players?season=2024-25`. Query parameters determine SQL values through bound parameters. Whitelist metric identifiers before choosing a SQL column.
+Shared selectors are implemented. `GET /seasons` returns `{"items": ["2024-25"]}`. `GET /players?season=2024-25` returns `{"season": "2024-25", "items": [{"player_id": "...", "player_name": "..."}]}` with names ordered alphabetically. Use these IDs in the comparison request. Missing or malformed season parameters produce 422 and unknown seasons produce 404. Database failures produce 503.
+
+Use `api.storage.fetch_rows(sql, parameters)` for read-only SQLite queries with bound values. Whitelist metric identifiers before choosing a SQL column. Use `ui.api_client.fetch_json(endpoint, params)` for UI requests. The client applies a five-second timeout, raises HTTP errors, and validates that JSON is an object. Each feature UI should catch these errors and display a useful message.
 
 Use FastAPI validation for invalid choices, invalid numbers, and malformed requests. Return 404 for an unknown season or selected player, and an empty items list for valid filters with zero qualifying results. The UI should explain empty results, connection failures, timeouts, and API validation errors. Keep HTTP request timeouts explicit.
 
-## API caching plan
+## Shared API caching
 
-Jinghao will add one shared API-side TTL cache and each owner will use it in their analysis endpoint. Cache successful analysis responses for **300 seconds**, with keys including the endpoint, season, and every effective parameter. Examples include conference for standings, metric and minimum games for leaderboards, and both player IDs for comparisons. Include the player-selector parameters if that response is cached.
+`api/cache.py` implements a thread-safe, process-local response cache with a **300-second TTL** and a maximum of **256 entries**. `/seasons` and `/players` use it. The three feature owners should connect their analysis endpoints to the same helper after validating and defaulting request parameters.
 
-Normalize parameter defaults before constructing keys. Repeated equivalent requests should reuse the cached response, different parameter sets must stay independent, and expired entries must be recomputed. Avoid caching errors. Keep the first version read-only with one API process, and restart it after replacing data. If a future endpoint changes data, invalidate related cached entries after a successful commit.
+```python
+from api.cache import query_cache_key, response_cache
 
-Add tests for a cache hit avoiding repeated analysis, parameter isolation, and expiration using a controllable clock. Update this section with the actual cache implementation and tests when implemented.
+key = query_cache_key("standings", season=season, conference=conference)
+result = response_cache.get_or_compute(key, calculate_standings)
+```
+
+The key helper includes the database path, endpoint name, and all supplied parameters sorted by name. Include every parameter that changes the result. For leaderboards, include season, metric, and minimum games. For comparisons, include season and both selected player IDs.
+
+The cache reuses successful results, isolates parameter combinations, recomputes expired entries, and returns copied values. Errors are retried on the next request. Concurrent requests for the same key reuse one calculation. `/health` always reads current row counts. Run one API process for this local application and restart it after replacing database contents. `response_cache.clear()` is available for future in-process writes, and must run after a successful data-changing transaction.
+
+Tests in `tests/test_shared_api.py` verify hits, key isolation, exact TTL expiration, explicit clearing, mutation isolation, capacity eviction, error retries, and concurrent requests. Analysis-endpoint integration with this helper is part of each owner's feature work.
 
 ## Reusing course work
 
@@ -158,11 +230,11 @@ Jinghao's player-comparison feature specifically includes the two API-backed pla
 
 ## Development workflow
 
-1. **Confirm the input data.** Sebastian and Zexian verify that both tables can be obtained for the same completed regular season. All members agree on scope, fields, source attribution, and the assignments above.
+1. **Review the prepared data and assignments.** The verified 2024–25 snapshots, mappings, importer, and shared tests are ready. Sebastian reviews team records and Zexian reviews player records. All members confirm their feature ownership and API response fields.
 2. **Review and merge the foundation PR.** Another member reviews the starter structure, README, tests, and run commands. Everyone checks out the updated `main` and starts their own feature branch.
-3. **Import and validate data.** Zexian builds the importer with Sebastian's team mapping. Test invalid values, duplicates, repeat imports, and rollback on failure. Review this small shared-data PR early so the three features can use the same database.
+3. **Load the shared database.** Each teammate runs the documented import and tests, then checks that `/health` returns 30 teams and 569 players. The importer and rollback checks are already implemented.
 4. **Build each feature end to end.** Implement the SQL analysis and validation, expose the API response, connect Streamlit over HTTP, render useful results, and write the owner's test. Use small hand-checkable test fixtures.
-5. **Add shared caching and integrate.** Jinghao adds the cache with tests. Each owner adopts it. Register all routers, combine UI sections, and resolve shared-file changes in PRs. Confirm all three features work in one application.
+5. **Use the shared cache and integrate.** Each owner adopts the implemented cache helper for their endpoint. Register all routers, combine UI sections, and resolve shared-file changes in PRs. Confirm all three features work in one application.
 6. **Reproduce on a teammate's computer.** Clone the repository, follow the README, acquire data, import, start both services, and run tests. Fix missing instructions and record actual feature/test/PR evidence below.
 7. **Submit the progress report and rehearse.** Report completed work, remaining tasks, challenges, and the repository URL. Run each member's live scenario on the presentation computer, including empty and invalid inputs.
 8. **Present and finalize.** Each member demonstrates and explains their own feature, its code, tests, chart interpretation, and limitations. Push reviewed final changes and submit the shared repository link through Canvas.
@@ -177,6 +249,17 @@ Jinghao's player-comparison feature specifically includes the two API-backed pla
 
 Each member must personally write at least one test for their new feature and be able to explain it. Add empty-result and invalid-input tests as appropriate. Infrastructure tests are shared setup evidence. Run `python -m pytest -q` before each PR.
 
+### Jinghao's comparison feature checklist
+
+The common player catalog, database query helper, HTTP client, and cache are ready to reuse. The following personal feature steps are pending.
+
+- [ ] Implement the two-player SQLite query and comparison API response.
+- [ ] Add player selectors and send the selected IDs through the HTTP client.
+- [ ] Display grouped bars and a table for the three per-game statistics.
+- [ ] Integrate comparison parameters with the shared cache and validate invalid selections.
+- [ ] Personally write and explain comparison feature tests.
+- [ ] Open a feature PR, obtain peer review, and prepare the live demonstration.
+
 ### Git collaboration and commit messages
 
 Use the same shared repository and a separate feature branch for each member. For example, Sebastian's local workflow after foundation merge is as follows.
@@ -187,7 +270,7 @@ git pull --ff-only origin main
 git switch -c feature/team-standings
 # Implement and test the feature, then stage the specific files changed.
 git add api/standings.py ui/standings.py tests/test_standings.py
-git commit -m "feat(standings): filter teams by conference and plot win percentages"
+git commit -m "Add conference filters and a win percentage chart"
 git push -u origin feature/team-standings
 ```
 
@@ -195,12 +278,12 @@ Include shared entry-point edits in the staged files when registering the featur
 
 Write commits that describe concrete completed work. Suitable examples include the following.
 
-- `feat(data): validate season CSVs and import team and player records atomically`
-- `feat(leaderboards): apply minimum games filter and rank player averages`
-- `feat(comparison): compare two selected players across points rebounds and assists`
-- `test(standings): verify conference filtering and win percentage ordering`
-- `feat(cache): reuse parameter-specific analysis responses for 300 seconds`
-- `docs(readme): record data download commands and individual feature evidence`
+- `Add validation and a repeatable import for team and player data`
+- `Filter the player leaderboard by games played and selected statistic`
+- `Compare two players across points, rebounds, and assists`
+- `Test conference filtering and win percentage ordering`
+- `Cache repeated API queries for five minutes`
+- `Document data setup and link each member's feature and tests`
 
 ## Timeline and submissions
 
@@ -208,8 +291,8 @@ Dates are in 2026, Eastern Time. Internal targets below are proposed team workin
 
 | Date | Deliverable | Owner |
 | --- | --- | --- |
-| Nov 25–27 | Confirm assignments and source, review foundation, agree on API fields | All three |
-| Nov 28–30 | Review/import the data and implement individual feature queries and tests | Zexian leads import, each member owns their feature |
+| Nov 25–27 | Review implemented shared data and helpers, confirm assignments and API fields | All three |
+| Nov 28–30 | Reproduce the shared setup and implement individual feature queries and tests | Each member owns their feature |
 | Dec 1 | Internal target for one full UI → API → SQLite feature, with the other two in progress | All three |
 | Dec 2–3 | Internal target for all three features, cache, and integration tests | All three, Jinghao coordinates |
 | **Dec 4** | **Progress Report, 100 points.** One team form with completed work, remaining work, challenges, and repository link | Jinghao proposed submitter, all review |
@@ -246,7 +329,7 @@ The Nov 23 project overview allocates the final repository's 300 points to **ind
 - [ ] Data validation, API errors, and UI failure/empty states are handled.
 - [ ] Each member's new feature has at least one test written by that member.
 - [ ] Each member has feature-branch commits, a PR, and another member's review.
-- [ ] README contains verified data attribution, download/import, setup, launch, and test instructions.
+- [x] README contains verified data attribution, download/import, setup, launch, and test instructions.
 - [ ] Contribution table links actual features, tests, PRs, and reviews.
 - [ ] A teammate reproduces the application on the presentation computer.
 - [ ] Demo Testing, presentation, and final repository submissions are completed.
