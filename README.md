@@ -14,7 +14,7 @@ The NBA visualization topic is selected. The assignments below are proposed by J
 | Sebastian Brookes | Team standings | Select East, West, or all teams and view wins, losses, win percentage, and a win-percentage bar chart. | `feature/team-standings` | Zexian |
 | Zexian Li | Player leaderboards | Select points, rebounds, or assists per game and a minimum games played threshold to view the top 10 players. | `feature/player-leaderboards` | Jinghao |
 
-Shared preparation is implemented on `setup/nba-shared-foundation`. The follow-up responsibilities are as follows.
+Shared preparation is available on `main`. Everyone can pull it before starting their own feature branch. The follow-up responsibilities are as follows.
 
 - Jinghao maintains the application shell and shared cache, and coordinates feature integration and the submission checklist.
 - Sebastian reviews the prepared team records and conference mapping, then implements and explains the standings feature.
@@ -42,7 +42,7 @@ The shared dataset is the **2024–25 regular season**, downloaded on Nov 25, 20
 
 ### Progress checkpoint
 
-Updated Nov 25, 2026. Shared setup is ready for team review. The three personal analysis features are pending.
+Updated Nov 25, 2026. Shared setup is complete and available on `main`. The three personal analysis features are pending.
 
 | Milestone | Status |
 | --- | --- |
@@ -61,7 +61,7 @@ This is 2 of 8 listed milestones completed. These milestones differ in size. Cou
 
 On Nov 25, the shared test suite passed **19 tests**. A temporary independent project directory was used to verify source checksums, regenerate identical cleaned CSVs, import the season twice, run all tests, start FastAPI and Streamlit, call the catalog endpoints over HTTP, and use the Streamlit connection button. The API returned 30 teams and 569 players. Optional restoration from the pinned download URLs and `python -m pip check` also passed.
 
-The next handoff step is a teammate reviewing the setup branch and reproducing the same commands on their own computer. Each member's personal feature implementation and tests remain pending.
+The next handoff step is each teammate pulling `main` and reproducing the same commands on their own computer. Each member's personal feature implementation and tests remain pending.
 
 ## Architecture
 
@@ -231,7 +231,7 @@ Jinghao's player-comparison feature specifically includes the two API-backed pla
 ## Development workflow
 
 1. **Review the prepared data and assignments.** The verified 2024–25 snapshots, mappings, importer, and shared tests are ready. Sebastian reviews team records and Zexian reviews player records. All members confirm their feature ownership and API response fields.
-2. **Review and merge the foundation PR.** Another member reviews the starter structure, README, tests, and run commands. Everyone checks out the updated `main` and starts their own feature branch.
+2. **Pull the shared foundation from `main`.** Everyone follows quick start and checks the data and test results before creating their own feature branch. Each new personal feature goes through a PR and another member's review before merging.
 3. **Load the shared database.** Each teammate runs the documented import and tests, then checks that `/health` returns 30 teams and 569 players. The importer and rollback checks are already implemented.
 4. **Build each feature end to end.** Implement the SQL analysis and validation, expose the API response, connect Streamlit over HTTP, render useful results, and write the owner's test. Use small hand-checkable test fixtures.
 5. **Use the shared cache and integrate.** Each owner adopts the implemented cache helper for their endpoint. Register all routers, combine UI sections, and resolve shared-file changes in PRs. Confirm all three features work in one application.
@@ -262,7 +262,7 @@ The common player catalog, database query helper, HTTP client, and cache are rea
 
 ### Git collaboration and commit messages
 
-Use the same shared repository and a separate feature branch for each member. For example, Sebastian's local workflow after foundation merge is as follows.
+Use the same shared repository and a separate feature branch for each member. For example, Sebastian's workflow when starting his feature is as follows.
 
 ```bash
 git switch main
@@ -291,7 +291,7 @@ Dates are in 2026, Eastern Time. Internal targets below are proposed team workin
 
 | Date | Deliverable | Owner |
 | --- | --- | --- |
-| Nov 25–27 | Review implemented shared data and helpers, confirm assignments and API fields | All three |
+| Nov 25–27 | Pull the shared setup from main, confirm assignments and API fields | All three |
 | Nov 28–30 | Reproduce the shared setup and implement individual feature queries and tests | Each member owns their feature |
 | Dec 1 | Internal target for one full UI → API → SQLite feature, with the other two in progress | All three |
 | Dec 2–3 | Internal target for all three features, cache, and integration tests | All three, Jinghao coordinates |
